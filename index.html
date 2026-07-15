@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ETF智能研判</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f0f1a;color:#e0e0ea;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif}
+#app{max-width:600px;margin:0 auto;min-height:100vh;padding-bottom:80px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#1a1a2e}
+.logo{font-size:18px;font-weight:800;color:#00d4aa}
+.update-time{font-size:11px;color:#8a8a9a}
+.index-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#1a1a2e;border-bottom:1px solid #2a2a3a}
+.idx-name{font-size:12px;color:#8a8a9a}.idx-price{font-size:16px;font-weight:700}
+.idx-change{font-size:13px;padding:2px 8px;border-radius:5px}
+.up{color:#2ed573;background:rgba(46,213,115,.12)}.down{color:#ff4757;background:rgba(255,71,87,.12)}
+.type-tabs{display:flex;gap:6px;padding:8px 16px;overflow-x:auto;white-space:nowrap;background:#1a1a2e;border-bottom:1px solid #2a2a3a;-webkit-overflow-scrolling:touch}
+.type-tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:5px 12px;border-radius:14px;font-size:12px;color:#8a8a9a;background:#0f0f1a;cursor:pointer}
+.tab.active,.tab:hover{background:#00d4aa;color:#000}
+.etf-card{display:flex;align-items:center;padding:12px 14px;margin:4px 10px;background:#1a1a2e;border-radius:10px;cursor:pointer}
+.etf-card .left{flex:2.5}.etf-card .name{font-size:14px;font-weight:600}
+.etf-card .code{font-size:10px;color:#8a8a9a}
+.etf-card .type-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;background:rgba(0,212,170,.15);color:#00d4aa;margin-left:4px}
+.etf-card .center{flex:1;text-align:center}.etf-card .price{font-size:15px;font-weight:700}
+.etf-card .right{flex:1.2;text-align:center}
+.etf-card .score{font-size:20px;font-weight:800}.score.buy{color:#2ed573}.score.hold{color:#ffa502}.score.sell{color:#ff4757}
+.etf-card .slabel{font-size:9px;color:#8a8a9a;display:block}
+.etf-card .change{flex:0.7;text-align:right;font-size:13px;font-weight:600}
+.detail{padding:16px;display:none}.back-btn{background:none;border:none;color:#00d4aa;font-size:13px;cursor:pointer;margin-bottom:10px}
+.quote-header{text-align:center;padding:16px 0}
+.quote-name{font-size:16px;font-weight:700}.quote-code{font-size:11px;color:#8a8a9a;margin:2px 0 10px}
+.quote-price{font-size:36px;font-weight:800}.quote-change{font-size:18px;font-weight:600;margin-top:4px}
+.quote-extra{font-size:11px;color:#8a8a9a;margin-top:6px}
+.signal-card{display:flex;align-items:center;padding:20px;border-radius:14px;background:#1a1a2e;border:2px solid #2a2a3a;margin:12px 0}
+.signal-card.strong_buy{border-color:#2ed573;background:rgba(46,213,115,.06)}
+.signal-card.sell{border-color:#ff4757;background:rgba(255,71,87,.06)}
+.signal-card .s-main{flex:1;text-align:center}
+.signal-card .s-score{font-size:44px;font-weight:800}
+.signal-card .s-label{font-size:11px;color:#8a8a9a}
+.signal-card .s-verdict{flex:1;text-align:center;font-size:20px;font-weight:700;padding:8px 16px;border-radius:8px}
+.signal-card .s-verdict.strong_buy{background:#2ed573;color:#000}
+.signal-card .s-verdict.buy{background:rgba(46,213,115,.25);color:#2ed573}
+.signal-card .s-verdict.hold{background:rgba(255,165,2,.15);color:#ffa502}
+.signal-card .s-verdict.sell,.s-verdict.reduce{background:rgba(255,71,87,.25);color:#ff4757}
+.signal-card .s-conf{font-size:11px;color:#8a8a9a;text-align:center}
+.factor-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.factor-item{padding:8px 12px;background:#1a1a2e;border-radius:8px}
+.factor-name{font-size:10px;color:#8a8a9a;margin-bottom:4px}
+.factor-bar{height:5px;background:#2a2a3a;border-radius:3px}
+.factor-fill{height:100%;background:#00d4aa;border-radius:3px}
+.factor-score{font-size:12px;font-weight:600;margin-top:3px;text-align:right}
+.target-box{margin-top:14px;padding:14px 16px;background:#1a1a2e;border-radius:10px}
+.target-row{font-size:13px;padding:3px 0}.bold{font-weight:700}.green{color:#2ed573}.red{color:#ff4757}
+.ind-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:14px}
+.ind-item{padding:10px;background:#1a1a2e;border-radius:8px;text-align:center;font-size:10px;color:#8a8a9a}
+.ind-item span{display:block;font-size:16px;font-weight:600;margin-top:3px;color:#e0e0ea}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;display:flex;background:#1a1a2e;border-top:1px solid #2a2a3a;z-index:100}
+.nav-item{flex:1;text-align:center;padding:10px 0;font-size:12px;color:#8a8a9a;cursor:pointer}
+.nav-item.active{color:#00d4aa}
+.loading{text-align:center;padding:40px;color:#8a8a9a;font-size:13px}
+.btn{flex:1;height:40px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#00d4aa;color:#000}.btn-secondary{background:#1a1a2e;color:#00d4aa;border:2px solid #00d4aa}
+.btn-row{display:flex;gap:10px;padding:16px 0}
+</style>
+</head>
+<body>
+<div id="app">
+<header class="top-bar"><h1 class="logo">ETF智能研判</h1><span class="update-time" id="utime"></span></header>
+<div class="index-bar"><span class="idx-name">上证指数</span><span class="idx-price" id="idxP">--</span><span class="idx-change" id="idxC">--</span></div>
+<div class="type-tabs" id="tabs"></div>
+<main><div id="listView" class="etf-list"></div><div id="detailView" class="detail"><button class="back-btn" onclick="showList()">← 返回</button><div id="dContent"></div></div></main>
+<nav class="bottom-nav"><div class="nav-item active" data-v="list">📊 行情</div><div class="nav-item" data-v="signal">📡 信号</div><div class="nav-item" data-v="watch">⭐ 自选</div></nav>
+<div class="loading" id="loading">⏳ 加载中...</div>
+</div>
+<script>
+let etfData=[],predictions={},watchlist=JSON.parse(localStorage.getItem('ew')||'[]'),curType='all',curView='list';
+const TYPES=['all','宽基','科技','医药','新能源','消费','军工','金融','资源','红利','跨境'];
+
+function classify(n){
+  if(/沪深300|中证500|上证50|科创50|创业板|A50|A500/i.test(n))return'宽基';
+  if(/半导体|芯片|AI|人工智能|5G|通信|计算机|软件/i.test(n))return'科技';
+  if(/医药|医疗|创新药|中药|生物/i.test(n))return'医药';
+  if(/新能源|光伏|锂电|新能车|碳中和|环保/i.test(n))return'新能源';
+  if(/消费|白酒|食品|农业|家电/i.test(n))return'消费';
+  if(/军工|国防|航天|船舶/i.test(n))return'军工';
+  if(/银行|证券|保险|金融|地产/i.test(n))return'金融';
+  if(/黄金|白银|有色|煤炭|钢铁|稀土/i.test(n))return'资源';
+  if(/红利|高股息|股息/i.test(n))return'红利';
+  if(/纳指|标普|恒生|港股|中概|海外|日经|德国/i.test(n))return'跨境';
+  return'其他';
+}
+
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script'),id='jp'+Date.now()+Math.random().toString(36).slice(2);
+    window[id]=data=>{resolve(data);delete window[id];s.remove()};
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+id;s.onerror=()=>{reject(new Error('fail'));delete window[id]};
+    document.head.appendChild(s);
+  });
+}
+
+async function loadData(){
+  document.getElementById('loading').style.display='block';
+  try{
+    const[etfR,idxR]=await Promise.all([
+      jsonp('https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=1&fid=f3&fs=m:1+t:6,m:0+t:5,m:0+t:13&fields=f2,f3,f4,f5,f6,f12,f14,f15,f16,f17,f18,f20,f21'),
+      jsonp('https://push2.eastmoney.com/api/qt/stock/get?secid=1.000001&fields=f43,f44,f45,f46,f47,f48,f170')
+    ]);
+    if(etfR?.data?.diff){etfData=etfR.data.diff.map(i=>({name:i.f14,code:i.f12,price:i.f2/1000,changePercent:i.f3/100,change:i.f4/1000,volume:i.f5,amount:i.f6,type:classify(i.f14)}))}
+    if(idxR?.data){const d=idxR.data;document.getElementById('idxP').textContent=(d.f43/1000).toFixed(2);const cp=d.f170/100,el=document.getElementById('idxC');el.textContent=(cp>=0?'+':'')+cp.toFixed(2)+'%';el.className='idx-change '+(cp>=0?'up':'down')}
+    document.getElementById('utime').textContent=new Date().toLocaleTimeString();
+    renderList();batchPredict();
+  }catch(e){console.error(e);document.getElementById('listView').innerHTML='<div class="loading">加载失败，请刷新重试</div>'}
+  document.getElementById('loading').style.display='none';
+}
+
+const MA=(d,p)=>{const c=d.map(x=>x.close),r=[];for(let i=0;i<c.length;i++){if(i<p-1){r.push(null);continue}let s=0;for(let j=i-p+1;j<=i;j++)s+=c[j];r.push(s/p)}return r};
+const EMA=(d,p)=>{const c=d.map(x=>x.close),r=[c[0]],m=2/(p+1);for(let i=1;i<c.length;i++)r.push((c[i]-r[i-1])*m+r[i-1]);return r};
+function MACD(d){const ef=EMA(d,12),es=EMA(d,26),df=ef.map((v,i)=>v-es[i]),dea=[df[0]];for(let i=1;i<df.length;i++)dea.push((df[i]-dea[i-1])*.2+dea[i-1]);return df.map((v,i)=>({macd:2*(v-dea[i])}))}
+function RSI(d,p=14){const c=d.map(x=>x.close),r=Array(p).fill(null);let g=0,l=0;for(let i=1;i<=p;i++){const x=c[i]-c[i-1];if(x>0)g+=x;else l+=Math.abs(x)}g/=p;l/=p;r.push(100-100/(1+g/(l||.0001)));for(let i=p+1;i<c.length;i++){const x=c[i]-c[i-1];g=(g*(p-1)+(x>0?x:0))/p;l=(l*(p-1)+(x<0?Math.abs(x):0))/p;r.push(100-100/(1+g/(l||.0001)))}return r}
+
+function predict(kline){
+  if(kline.length<60)return null;
+  const l=kline.length-1,p=kline[l].close,ma5=MA(kline,5),ma20=MA(kline,20),ma60=MA(kline,60),macdArr=MACD(kline),rsiArr=RSI(kline,14);
+  let as=0;if(p>ma5[l])as+=20;if(ma5[l]>ma20[l])as+=25;if(ma20[l]>ma60[l])as+=25;if(ma5[l]>ma5[l-2])as+=15;if(ma20[l]>ma20[l-5])as+=15;
+  let trend=as*.6;const s=kline.slice(Math.max(0,l-19),l+1).map(d=>d.close),st=Math.sqrt(s.reduce((sm,v)=>sm+(v-ma20[l])**2,0)/s.length),bU=ma20[l]+2*st,bL=ma20[l]-2*st,pos=(p-bL)/(bU-bL||.0001);trend+=pos>.8?15:pos>.5?25:pos>.2?10:5;if(p>ma20[l])trend+=15;trend=Math.min(100,trend);
+  let mom=50;const macd=macdArr[l],rsi=rsiArr[l];if(macd?.macd>0)mom+=10;if(l>1&&macdArr[l-1]&&macd.macd>macdArr[l-1].macd)mom+=5;if(rsi!==null){if(rsi<30)mom+=15;else if(rsi<50)mom+=10;else if(rsi>80)mom-=15;else if(rsi>70)mom-=5}mom=Math.max(0,Math.min(100,mom));
+  let vs=50;if(kline.length>=5){const rd=kline.slice(-5);for(let i=1;i<rd.length;i++){if(rd[i].close>rd[i-1].close&&rd[i].volume>rd[i-1].volume)vs+=4;else if(rd[i].close<rd[i-1].close&&rd[i].volume<rd[i-1].volume)vs-=4;else if(rd[i].close>rd[i-1].close&&rd[i].volume<rd[i-1].volume)vs-=6;else vs-=8}}vs=Math.max(0,Math.min(100,vs));
+  let pf=0,nf=0;kline.slice(-20).forEach(d=>{const mf=(d.high+d.low+d.close)/3*d.volume;if(d.close>(d.high+d.low)/2)pf+=mf;else nf+=mf});let mfi=(pf+nf)?pf/(pf+nf)*100:50,cap=50;if(mfi>60)cap+=20;else if(mfi>40)cap+=10;else cap-=10;if(pf-nf>0)cap+=15;else cap-=10;cap=Math.max(0,Math.min(100,cap));
+  let sent=50,streak=0;for(let i=l;i>0&&kline[i].close>kline[i-1].close;i--)streak++;if(streak>=5)sent+=8;
+  const score=Math.round(trend*.25+mom*.20+vs*.15+cap*.15+sent*.15+50*.10);
+  let signal='hold';if(score>=80)signal='strong_buy';else if(score>=60)signal=rsi>80?'hold':'buy';else if(score>=40)signal='hold';else if(score>=20)signal='reduce';else signal='sell';
+  const tr=kline.map((d,i)=>i===0?d.high-d.low:Math.max(d.high-d.low,Math.abs(d.high-kline[i-1].close),Math.abs(d.low-kline[i-1].close)));let atr=tr.slice(-14).reduce((a,b)=>a+b)/14;for(let i=14;i<tr.length;i++)atr=(atr*13+tr[i])/14;
+  const checks=[ma5[l]>ma20[l],macd?.macd>0,rsi>40&&rsi<70,pf-nf>0,p>ma20[l]],conf=Math.round(checks.filter(Boolean).length/checks.length*100);
+  return{score,signal,signalText:{strong_buy:'强烈买入',buy:'建议买入',hold:'观望',reduce:'减仓',sell:'卖出'}[signal],confidence:conf,targets:{current:+p.toFixed(3),target1:+(p+atr*1.5).toFixed(3),target2:+(p+atr*3).toFixed(3),stopLoss:+(p-atr*2).toFixed(3)},factors:{trend:{score:trend},momentum:{score:mom},volumePrice:{score:vs},capital:{score:cap},sentiment:{score:sent},macro:{score:50}},indicators:{rsi:rsi!==null?rsi.toFixed(1):'--',macd:macd?.macd?.toFixed(4)||'--',bollUpper:bU.toFixed(3),bollLower:bL.toFixed(3)}};
+}
+
+async function batchPredict(){
+  for(let i=0;i<Math.min(etfData.length,12);i++){
+    const etf=etfData[i];
+    try{
+      const raw=await jsonp('https://api.fund.eastmoney.com/f10/lsjz?fundCode='+etf.code+'&pageIndex=1&pageSize=120');
+      if(raw?.Data?.LSJZList){
+        const list=raw.Data.LSJZList.reverse(),klines=[];
+        for(let j=0;j<list.length;j++){const nav=parseFloat(list[j].DWJZ),chg=parseFloat(list[j].JZZZL)/100,c=nav,o=nav/(1+chg),h=Math.max(o,c)*1.002,lo=Math.min(o,c)*0.998;klines.push({date:list[j].FSRQ,open:o,close:c,high:h,low:lo,volume:0,amount:0})}
+        const pred=predict(klines);if(pred)predictions[etf.code]=pred;
+      }
+    }catch(e){}
+  }
+  renderList();
+}
+
+function renderList(){
+  let filtered=etfData.filter(e=>curType==='all'||e.type===curType);
+  if(curView==='signal'){filtered=Object.entries(predictions).map(([c,p])=>{const e=etfData.find(x=>x.code===c);return e?{...e,prediction:p}:null}).filter(Boolean).filter(x=>['strong_buy','sell','buy'].includes(x.prediction.signal)).sort((a,b)=>b.prediction.score-a.prediction.score)}
+  if(curView==='watch'){filtered=watchlist.map(w=>etfData.find(e=>e.code===w.code)).filter(Boolean)}
+  filtered.sort((a,b)=>Math.abs(b.changePercent)*b.volume-Math.abs(a.changePercent)*a.volume);
+  document.getElementById('listView').innerHTML=filtered.slice(0,25).map(e=>{
+    const pred=predictions[e.code],s=pred?`<span class="score ${pred.score>=60?'buy':pred.score>=40?'hold':'sell'}">${pred.score}</span><span class="slabel">${pred.signalText}</span>`:'<span style="color:#8a8a9a;font-size:11px">…</span>';
+    return`<div class="etf-card" onclick="showDetail('${e.code}','${e.name.replace(/'/g,"\\'")}')"><div class="left"><div class="name">${e.name}</div><div class="code">${e.code}<span class="type-badge">${e.type}</span></div></div><div class="center"><div class="price">${e.price.toFixed(3)}</div></div><div class="right">${s}</div><div class="change ${e.changePercent>=0?'up':'down'}">${(e.changePercent>=0?'+':'')+e.changePercent.toFixed(2)}%</div></div>`;
+  }).join('')||'<div class="loading">暂无数据</div>';
+}
+
+function showDetail(code,name){
+  const etf=etfData.find(e=>e.code===code),pred=predictions[code];if(!etf)return;
+  let h=`<div class="quote-header"><div class="quote-name">${name}</div><div class="quote-code">${code}</div><div class="quote-price">${etf.price.toFixed(3)}</div><div class="quote-change ${etf.changePercent>=0?'up':'down'}">${(etf.changePercent>=0?'+':'')+etf.changePercent.toFixed(2)}%</div><div class="quote-extra">成交额 ${(etf.amount/1e8).toFixed(2)}亿</div></div>`;
+  if(pred){
+    h+=`<div class="signal-card ${pred.signal}"><div class="s-main"><div class="s-score">${pred.score}</div><div class="s-label">综合评分</div></div><div class="s-verdict ${pred.signal}">${pred.signalText}</div><div class="s-conf">置信度 ${pred.confidence}%</div></div>`;
+    h+=`<div class="factor-grid">${Object.entries(pred.factors).map(([k,v])=>`<div class="factor-item"><div class="factor-name">${k}</div><div class="factor-bar"><div class="factor-fill" style="width:${v.score}%"></div></div><div class="factor-score">${v.score}</div></div>`).join('')}</div>`;
+    h+=`<div class="target-box"><div class="target-row">当前: <span class="bold">${pred.targets.current}</span></div><div class="target-row">目标1: <span class="green">${pred.targets.target1}</span></div><div class="target-row">目标2: <span class="green">${pred.targets.target2}</span></div><div class="target-row">止损: <span class="red">${pred.targets.stopLoss}</span></div></div>`;
+    h+=`<div class="ind-grid"><div class="ind-item">RSI<span>${pred.indicators.rsi}</span></div><div class="ind-item">MACD<span>${pred.indicators.macd}</span></div><div class="ind-item">布林上<span>${pred.indicators.bollUpper}</span></div><div class="ind-item">布林下<span>${pred.indicators.bollLower}</span></div></div>`;
+  }
+  const isW=watchlist.some(w=>w.code===code);
+  h+=`<div class="btn-row"><button class="btn btn-primary" onclick="toggleW('${code}','${name.replace(/'/g,"\\'")}')">${isW?'⭐ 已自选':'+ 加入自选'}</button><button class="btn btn-secondary" onclick="showList()">返回列表</button></div>`;
+  document.getElementById('dContent').innerHTML=h;document.getElementById('detailView').style.display='block';document.getElementById('listView').style.display='none';window.scrollTo(0,0);
+}
+function showList(){document.getElementById('detailView').style.display='none';document.getElementById('listView').style.display='block'}
+function toggleW(code,name){const i=watchlist.findIndex(w=>w.code===code);if(i>=0)watchlist.splice(i,1);else watchlist.push({code,name});localStorage.setItem('ew',JSON.stringify(watchlist));showDetail(code,name)}
+
+function init(){
+  document.getElementById('tabs').innerHTML=TYPES.map(t=>`<span class="tab${t===curType?' active':''}" onclick="setType('${t}')">${t==='all'?'全部':t}</span>`).join('');
+  document.querySelectorAll('.bottom-nav .nav-item').forEach(n=>n.onclick=function(){document.querySelectorAll('.bottom-nav .nav-item').forEach(x=>x.classList.remove('active'));this.classList.add('active');curView=this.dataset.v;renderList()});
+  loadData();
+}
+function setType(t){curType=t;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.textContent===(t==='all'?'全部':t)));renderList()}
+init();
+</script>
+</body>
+</html>
