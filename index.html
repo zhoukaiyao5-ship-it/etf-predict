@@ -91,24 +91,15 @@ function classify(n){
   return'其他';
 }
 
-// CORS代理链 (GitHub Pages通过代理拉数据)
-const CORS_PROXY=['https://api.allorigins.win/raw?url=','https://corsproxy.io/?','https://api.codetabs.com/v1/proxy?quest='];
-let pxIdx=0;
-
-async function apiFetch(url){
-  try{const r=await fetch(url);if(r.ok)return await r.json()}catch(e){}
-  for(let i=0;i<CORS_PROXY.length;i++){
-    try{const r=await fetch(CORS_PROXY[(pxIdx+i)%CORS_PROXY.length]+encodeURIComponent(url));if(r.ok){pxIdx=(pxIdx+i)%CORS_PROXY.length;return await r.json()}}catch(e){}
-  }
-  return null;
-}
+// 从仓库静态JSON文件读取数据 (GitHub Actions定时拉取,同源无CORS问题)
+async function apiFetch(url){return null} // 废弃,改读本地文件
 
 async function loadData(){
   document.getElementById('loading').style.display='block';
   try{
     const[etfR,idxR]=await Promise.all([
-      apiFetch('https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=1&fid=f3&fs=m:1+t:6,m:0+t:5,m:0+t:13&fields=f2,f3,f4,f5,f6,f12,f14,f15,f16,f17,f18,f20,f21'),
-      apiFetch('https://push2.eastmoney.com/api/qt/stock/get?secid=1.000001&fields=f43,f44,f45,f46,f47,f48,f170')
+      fetch('data/etf_list.json').then(r=>r.json()).catch(()=>null),
+      fetch('data/index.json').then(r=>r.json()).catch(()=>null)
     ]);
     if(etfR?.data?.diff){etfData=etfR.data.diff.map(i=>({name:i.f14,code:i.f12,price:i.f2/1000,changePercent:i.f3/100,change:i.f4/1000,volume:i.f5,amount:i.f6,type:classify(i.f14)}))}
     if(idxR?.data){const d=idxR.data;document.getElementById('idxP').textContent=(d.f43/1000).toFixed(2);const cp=d.f170/100,el=document.getElementById('idxC');el.textContent=(cp>=0?'+':'')+cp.toFixed(2)+'%';el.className='idx-change '+(cp>=0?'up':'down')}
@@ -143,7 +134,7 @@ async function batchPredict(){
   for(let i=0;i<Math.min(etfData.length,12);i++){
     const etf=etfData[i];
     try{
-      const raw=await apiFetch('https://api.fund.eastmoney.com/f10/lsjz?fundCode='+etf.code+'&pageIndex=1&pageSize=120');
+      const raw=await fetch('data/nav/'+etf.code+'.json').then(r=>r.json()).catch(()=>null);
       if(raw?.Data?.LSJZList){
         const list=raw.Data.LSJZList.reverse(),klines=[];
         for(let j=0;j<list.length;j++){const nav=parseFloat(list[j].DWJZ),chg=parseFloat(list[j].JZZZL)/100,c=nav,o=nav/(1+chg),h=Math.max(o,c)*1.002,lo=Math.min(o,c)*0.998;klines.push({date:list[j].FSRQ,open:o,close:c,high:h,low:lo,volume:0,amount:0})}
