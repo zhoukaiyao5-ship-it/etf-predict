@@ -1,32 +1,19 @@
-name: Fetch ETF Data
+name: fetch-data
 on:
-  schedule:
-    - cron: '*/15 1-7 * * 1-5'
+  schedule: [{cron: '*/15 1-7 * * 1-5'}]
   workflow_dispatch:
-permissions:
-  contents: write
+permissions: {contents: write}
 jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch Data
-        run: |
+      - run: |
           mkdir -p data/nav
-          curl -s -H "User-Agent: Mozilla/5.0" \
-            'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=1&fid=f3&fs=m:1+t:6,m:0+t:5,m:0+t:13&fields=f2,f3,f4,f5,f6,f12,f14,f15,f16,f17,f18,f20,f21' \
-            -o data/etf_list.json
-          curl -s -H "User-Agent: Mozilla/5.0" \
-            'https://push2.eastmoney.com/api/qt/stock/get?secid=1.000001&fields=f43,f44,f45,f46,f47,f48,f170' \
-            -o data/index.json
+          curl -sL -H "User-Agent: Mozilla/5.0" 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=1&fid=f3&fs=m:1+t:6,m:0+t:5,m:0+t:13&fields=f2,f3,f4,f5,f6,f12,f14,f15,f16,f17,f18,f20,f21' -o data/etf_list.json
+          curl -sL -H "User-Agent: Mozilla/5.0" 'https://push2.eastmoney.com/api/qt/stock/get?secid=1.000001&fields=f43,f44,f45,f46,f47,f48,f170' -o data/index.json
           CODES=$(python3 -c "import json;d=json.load(open('data/etf_list.json'));print(' '.join([i['f12'] for i in d.get('data',{}).get('diff',[])[:12]]))")
-          for c in $CODES; do
-            curl -s -H "User-Agent: Mozilla/5.0" -H "Referer: https://fundf10.eastmoney.com/" \
-              "https://api.fund.eastmoney.com/f10/lsjz?fundCode=${c}&pageIndex=1&pageSize=120" \
-              -o "data/nav/${c}.json" 2>/dev/null || true
-          done
-          echo "Done: $(ls data/nav/ | wc -l) NAV files"
-      - name: Push
-        run: |
-          git config user.name "github-actions"; git config user.email "actions@github.com"
-          git add data/; git diff --staged --quiet || (git commit -m "auto: update $(date +%Y%m%d-%H%M)" && git push)
+          for c in $CODES; do curl -sL -H "User-Agent: Mozilla/5.0" -H "Referer: https://fundf10.eastmoney.com/" "https://api.fund.eastmoney.com/f10/lsjz?fundCode=${c}&pageIndex=1&pageSize=120" -o "data/nav/${c}.json" 2>/dev/null || true; done
+      - run: |
+          git config user.name "actions"; git config user.email "actions@github.com"
+          git add data/; git diff --staged --quiet || (git commit -m "data: $(date +%m%d-%H%M)" && git push)
